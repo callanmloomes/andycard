@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Andy</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!--
+  EDIT ME
+  image1.jpg  shows when the secret is found
+  image2.jpg  shows on the damage screen
+-->
+<script>
+  const CONFIG = {
+    message: "Happy Birthday Andy!\n\nIt is an absolute pleasure to have known such a GOATED individual for as long as I have known you. You are one of the funniest, kindest and most down to earth guys that I know, and a jawline that could cut steel to top it all off. I consider myself insanely lucky to consider myself your friend, and may we remain that way for the rest of our lives. I can see some insane plays being made this year by you, and dream every waking moment of when I can see you next.\n\nLove, Callan",
+    image1: "image1.jpg",
+    image2: "image2.jpg",
+    // icon: optional image file (e.g. "vegolas.png"); leave "" for a drawn badge
+    players: [
+      { name: "Firepoptart", icon: "firepoptart.jpg", fixed: 1 },   // Callan
+      { name: "Vegolas",     icon: "vegolas.jpg", fixed: 2 },   // Andy
+      { name: "Chaegene",    icon: "chaegene.jpg" },             // Eugene
+      { name: "EugeneChae",  icon: "eugenechae.jpg" },             // Danil
+      { name: "Black Dude",  icon: "blackdude.jpg" }              // Arthian
+    ],
+    // stat lines, best first; the bottom three are shuffled between the other players on each load
+    stats: [
+      { dmg: 58412, k: 19, d: 3,  a: 27 },
+      { dmg: 55967, k: 16, d: 4,  a: 31 },
+      { dmg: 24780, k: 6,  d: 11, a: 14 },
+      { dmg: 19215, k: 4,  d: 13, a: 12 },
+      { dmg: 13540, k: 2,  d: 15, a: 9 }
+    ]
+  };
+</script>
+
+<style>
+  :root{
+    --bg:#060c16; --panel:#0c1624; --line:#1e2d42;
+    --gold:#c8aa6e; --gold2:#f0e6d2; --blue:#0ac8b9;
+    --muted:#6f7f95; --text:#e6e9ef; --red:#c24b4b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(ellipse at top,#10213a 0%,var(--bg) 60%) fixed;
+    color:var(--text);font-family:Inter,system-ui,sans-serif;
+    display:flex;justify-content:center;padding:32px 16px 48px;
+    -webkit-user-select:none;user-select:none;
+  }
+  .screen{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:22px}
+  .screen[hidden]{display:none}
+  .fade{animation:fade .5s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  h1{font-family:Cinzel,serif;color:var(--gold);letter-spacing:.12em;font-size:15px;text-transform:uppercase;font-weight:700}
+
+  /* secret message slots */
+  .secret{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 14px;min-height:64px}
+  .word{display:flex;gap:3px}
+  .slot{width:22px;height:30px;border-bottom:2px solid var(--line);display:grid;place-items:center;
+    font-family:Cinzel,serif;font-weight:700;font-size:18px;color:var(--gold2)}
+  .word.found .slot{border-color:var(--gold);animation:pop .35s ease both}
+  .word.found .slot:nth-child(2){animation-delay:.04s}.word.found .slot:nth-child(3){animation-delay:.08s}
+  .word.found .slot:nth-child(4){animation-delay:.12s}.word.found .slot:nth-child(5){animation-delay:.16s}
+  .word.found .slot:nth-child(6){animation-delay:.2s}
+  .q{font-family:Cinzel,serif;font-size:18px;color:var(--gold2);align-self:center;margin-left:1px;opacity:0;transition:opacity .4s}
+  .done .q{opacity:1}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+
+  /* board */
+  .board-wrap{position:relative;width:100%;touch-action:none}
+  .board{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;padding:12px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .cell{aspect-ratio:1;border-radius:8px;display:grid;place-items:center;
+    background:#12203300;border:1px solid var(--line);
+    font-family:Cinzel,serif;font-weight:700;font-size:clamp(18px,5.5vw,24px);color:var(--text);
+    transition:background .12s,border-color .12s,transform .12s;cursor:pointer}
+  .cell.sel{background:rgba(10,200,185,.18);border-color:var(--blue);color:#fff;transform:scale(1.05)}
+  .cell.used{color:var(--gold);border-color:rgba(200,170,110,.45)}
+  .cell.bad{animation:shake .3s}
+  .cell.hint{animation:hint .8s ease 3}
+  @keyframes hint{50%{background:rgba(200,170,110,.4);border-color:var(--gold);color:var(--gold2)}}
+  @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  svg.trail{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+
+  .current{height:22px;font-family:Cinzel,serif;letter-spacing:.2em;color:var(--blue);font-size:16px}
+
+  button{font-family:Cinzel,serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    font-size:12px;color:var(--gold2);background:transparent;border:1px solid var(--gold);
+    padding:10px 22px;border-radius:4px;cursor:pointer;transition:background .15s}
+  button:hover{background:rgba(200,170,110,.12)}
+  button.ghost{border-color:var(--line);color:var(--muted)}
+  button.primary{background:linear-gradient(180deg,#1e2328,#0a1018);border-color:var(--gold);padding:12px 32px}
+
+  .photo{width:100%;border-radius:10px;border:1px solid var(--line);display:block;background:var(--panel)}
+  .ph{width:100%;aspect-ratio:4/3;border:1px dashed var(--line);border-radius:10px;display:grid;place-items:center;
+    color:var(--muted);font-size:12px;letter-spacing:.08em}
+  #reveal{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%}
+  #reveal[hidden]{display:none}
+
+  /* damage screen */
+  .bday{text-align:center;display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+  .bday h2{font-family:Cinzel,serif;font-weight:700;font-size:clamp(22px,6.5vw,28px);color:var(--gold2);
+    letter-spacing:.04em;text-shadow:0 0 18px rgba(200,170,110,.35)}
+  .bday p{color:var(--gold);font-size:14px}
+  .scoreboard{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 0}
+  .intro{text-align:center;display:flex;flex-direction:column;gap:6px}
+  .intro p{color:var(--muted);font-size:13px;letter-spacing:.04em}
+  .row{display:grid;grid-template-columns:16px 44px minmax(0,1fr) 72px 50px;align-items:center;gap:10px;padding:10px 12px;
+    opacity:0;transform:translateX(-8px);transition:opacity .4s,transform .4s}
+  .row.in{opacity:1;transform:none}
+  .row+.row{border-top:1px solid var(--line)}
+  .rank{font-family:Cinzel,serif;color:var(--muted);font-size:14px;text-align:center}
+  .row:first-child .rank{color:var(--gold)}
+  .who{min-width:0}
+  .name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kda{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+  .kda b{font-weight:600;color:var(--text)}
+  .kda .d{color:#d06a6a}
+  .icon{width:44px;height:44px;border-radius:50%;border:2px solid #785a28;position:relative;overflow:visible}
+  .icon img,.icon svg{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover}
+  .row.low .icon{border-color:var(--gold)}
+  .lvl{position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);background:#0a1018;border:1px solid #785a28;
+    color:var(--gold2);font-size:9px;line-height:1;padding:2px 4px;border-radius:6px;font-weight:600}
+  .bar{height:10px;background:#0a1220;border-radius:2px;overflow:hidden}
+  .fill{height:100%;width:0;background:linear-gradient(90deg,#7a2a2a,var(--red));transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+  .row.low .fill{background:linear-gradient(90deg,#0a6e66,var(--blue))}
+  .num{text-align:right;font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
+  .row.low .num{color:var(--text)}
+  .note{font-size:15px;line-height:1.7;text-align:left;color:var(--gold2);white-space:pre-line}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1 -->
+<section class="screen fade" id="s1">
+  <div class="intro"><h1>Boggle Practice</h1><p>Find the hidden message</p></div>
+  <div class="secret" id="secret"></div>
+  <div class="current" id="current"></div>
+  <div class="board-wrap" id="wrap">
+    <div class="board" id="board"></div>
+    <svg class="trail" id="trail"></svg>
+  </div>
+  <button class="ghost" id="hintBtn">Hint</button>
+
+  <div id="reveal" hidden>
+    <div id="img1"></div>
+    <button class="primary" id="next">Click for a yarn</button>
+  </div>
+</section>
+
+<!-- SCREEN 2 -->
+<section class="screen" id="s2" hidden>
+  <div class="bday"><h2>Happy Birthday LingAndy</h2><p>Here's to another year of carrying ARAM games!</p></div>
+  <h1>Damage Dealt</h1>
+  <div class="scoreboard" id="score"></div>
+  <p class="note" id="note"></p>
+  <div id="img2"></div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+const N = 6;
+const GRID = "GINGLWVIEMRABBBRFEKRELSPMOUEEIYMTSEC".split("");
+const WORDS = ["ARE","YOU","GIVING","ME","FREE","PIECES"];
+// one valid path per word, used for hints
+const PATHS = { ARE:[11,10,17], YOU:[30,25,26], GIVING:[0,1,6,7,2,3], ME:[9,8], FREE:[16,15,20,27], PIECES:[23,29,28,35,34,33] };
+const found = new Set();
+
+/* message slots */
+WORDS.forEach(w=>{
+  const d=document.createElement('div'); d.className='word'; d.dataset.w=w;
+  [...w].forEach(()=>{ const s=document.createElement('div'); s.className='slot'; d.appendChild(s); });
+  $('secret').appendChild(d);
+});
+const q=document.createElement('span'); q.className='q'; q.textContent='?';
+$('secret').lastChild.appendChild(q);
+
+/* board */
+const cells = GRID.map((ch,i)=>{
+  const c=document.createElement('div'); c.className='cell'; c.textContent=ch; c.dataset.i=i;
+  $('board').appendChild(c); return c;
+});
+const adj=(a,b)=>{ const ar=a/N|0, ac=a%N, br=b/N|0, bc=b%N; return a!==b && Math.abs(ar-br)<=1 && Math.abs(ac-bc)<=1; };
+
+let path=[], dragging=false, moved=false;
+const word = () => path.map(i=>GRID[i]).join('');
+
+function render(){
+  cells.forEach((c,i)=>c.classList.toggle('sel', path.includes(i)));
+  $('current').textContent = word();
+  const svg=$('trail'), wr=$('wrap').getBoundingClientRect();
+  if(path.length<2){ svg.innerHTML=''; return; }
+  const pts=path.map(i=>{ const r=cells[i].getBoundingClientRect(); return [(r.left+r.right)/2-wr.left,(r.top+r.bottom)/2-wr.top]; });
+  svg.innerHTML=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#0ac8b9" stroke-opacity=".55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+function add(i){
+  const last=path[path.length-1];
+  if(path.length && i===path[path.length-2]){ path.pop(); render(); return; }   // backtrack
+  if(path.includes(i)) return;
+  if(path.length && !adj(last,i)) { if(dragging) return; path=[]; }             // tap elsewhere restarts
+  path.push(i); render(); check();
+}
+
+function check(){
+  const w=word();
+  if(WORDS.includes(w) && !found.has(w)){
+    found.add(w);
+    path.forEach(i=>cells[i].classList.add('used'));
+    document.querySelector(`.word[data-w="${w}"]`).classList.add('found');
+    [...document.querySelector(`.word[data-w="${w}"]`).children].forEach((s,k)=>{ if(s.classList.contains('slot')) s.textContent=w[k]; });
+    path=[]; setTimeout(render,150);
+    if(found.size===WORDS.length) complete();
+  }
+}
+
+function fail(){
+  if(path.length>1) path.forEach(i=>{ cells[i].classList.remove('bad'); void cells[i].offsetWidth; cells[i].classList.add('bad'); });
+  path=[]; render();
+}
+
+const cellAt=(x,y)=>{ const el=document.elementFromPoint(x,y); return el && el.classList.contains('cell') ? +el.dataset.i : null; };
+$('board').addEventListener('pointerdown',e=>{
+  const i=cellAt(e.clientX,e.clientY); if(i===null) return;
+  dragging=true; moved=false; add(i);
+});
+addEventListener('pointermove',e=>{
+  if(!dragging) return;
+  const i=cellAt(e.clientX,e.clientY);
+  if(i!==null && i!==path[path.length-1]){ moved=true; add(i); }
+});
+addEventListener('pointerup',()=>{
+  if(!dragging) return; dragging=false;
+  if(moved && path.length) fail();   // released a drag without a word
+});
+addEventListener('resize',render);
+
+/* hint: flicker a whole word not yet found */
+let hinted=null;
+$('hintBtn').addEventListener('click',()=>{
+  const left=WORDS.filter(w=>!found.has(w)); if(!left.length) return;
+  const w=left[(left.indexOf(hinted)+1)%left.length];   // pressing again moves to the next word
+  hinted=w;
+  cells.forEach(c=>c.classList.remove('hint'));
+  PATHS[w].forEach(i=>{ void cells[i].offsetWidth; cells[i].classList.add('hint'); });
+  setTimeout(()=>PATHS[w].forEach(i=>cells[i].classList.remove('hint')),2500);
+});
+
+/* images, with a placeholder if the file is missing */
+function photo(slot,src){
+  const img=new Image(); img.className='photo'; img.src=src;
+  img.onerror=()=>{ $(slot).innerHTML=`<div class="ph">${src}</div>`; $(slot).style.width='100%'; };
+  $(slot).style.width='100%'; $(slot).appendChild(img);
+}
+
+function complete(){
+  $('secret').classList.add('done');
+  $('hintBtn').style.display='none';
+  setTimeout(()=>{
+    $('wrap').style.display='none'; $('current').style.display='none';
+    photo('img1',CONFIG.image1);
+    $('reveal').hidden=false; $('reveal').classList.add('fade');
+  },900);
+}
+
+/* drawn icon: one colour and emblem per player */
+function badge(h){
+  const hues=[20,200,140,275,340], hue=hues[h%hues.length];
+  const shapes=[
+    '<path d="M20 8l3.5 8 8.5.8-6.4 5.6 1.9 8.4L20 26.6 12.5 30.8l1.9-8.4L8 16.8l8.5-.8z"/>',
+    '<path d="M20 7c4 6 9 8 9 15a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5-1-5 0-9 2-12z"/>',
+    '<path d="M20 7l11 13-11 13L9 20z"/>',
+    '<path d="M11 10h18v10c0 7-9 11-9 11s-9-4-9-11z"/>',
+    '<circle cx="20" cy="20" r="6"/><path d="M20 6v6M20 28v6M6 20h6M28 20h6" stroke="currentColor" stroke-width="2.5"/>',
+    '<path d="M20 6l4 10h-3l5 18-12-20h4z"/>'
+  ];
+  return `<svg viewBox="0 0 40 40" style="color:hsl(${hue} 70% 75%)">
+    <defs><radialGradient id="g${h}" cx="50%" cy="35%"><stop offset="0" stop-color="hsl(${hue} 55% 38%)"/><stop offset="1" stop-color="hsl(${hue} 60% 12%)"/></radialGradient></defs>
+    <rect width="40" height="40" fill="url(#g${h})"/><g fill="currentColor" transform="translate(3 0) scale(.85)">${shapes[[1,0,3,2,5][h]]}</g></svg>`;
+}
+
+/* screen 2 */
+$('next').addEventListener('click',()=>{
+  $('s1').hidden=true; $('s2').hidden=false; $('s2').classList.add('fade'); scrollTo(0,0);
+  const top=CONFIG.players.filter(p=>p.fixed).sort((a,b)=>a.fixed-b.fixed);
+  const rest=CONFIG.players.filter(p=>!p.fixed).sort(()=>Math.random()-.5);
+  const list=[...top,...rest].map((p,k)=>({...p,...CONFIG.stats[k]}));
+  const max=Math.max(...list.map(p=>p.dmg));
+  $('score').innerHTML=list.map((p,k)=>`
+    <div class="row${p.fixed?' low':''}">
+      <span class="rank">${k+1}</span>
+      <div class="icon">${p.icon?`<img src="${p.icon}" alt="">`:badge(CONFIG.players.findIndex(q=>q.name===p.name))}<span class="lvl">${p.fixed?18:[16,17,16][k-2]}</span></div>
+      <div class="who"><div class="name">${p.name}</div>
+        <div class="kda"><b>${p.k}</b> / <span class="d">${p.d}</span> / <b>${p.a}</b></div></div>
+      <div class="bar"><div class="fill" data-w="${p.dmg/max*100}"></div></div>
+      <span class="num">${p.dmg.toLocaleString()}</span>
+    </div>`).join('');
+  [...document.querySelectorAll('.row')].forEach((r,k)=>setTimeout(()=>{
+    r.classList.add('in'); r.querySelector('.fill').style.width=r.querySelector('.fill').dataset.w+'%';
+  },300+k*220));
+  $('note').textContent=CONFIG.message;
+  photo('img2',CONFIG.image2);
+});
+</script>
+</body>
+</html>
